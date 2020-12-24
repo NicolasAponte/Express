@@ -23,7 +23,7 @@ dishRouter.route('/') //Declaramos el endpoint
 })
 
 .post((req,res,next) => {
-    Dishes.create(req.body) //Los parametrso se envian atraves del body del req
+    Dishes.create(req.body) //Los parametros se envian atraves del body del req
         .then((dish) => {
             console.log('Dish Created ', dish);
             res.statusCode = 200;
@@ -46,7 +46,8 @@ dishRouter.route('/') //Declaramos el endpoint
             res.json(resp);
         }, (err) => next(err))
         .catch((err) => next(err));
-})
+});
+//----------------------------------------------------------------
 
 dishRouter.route('/:dishId')
 
@@ -86,6 +87,153 @@ dishRouter.route('/:dishId')
     }, (err) => next(err))
     .catch((err) => next(err));
 });
+//----------------------------------------------------------------
 
+dishRouter.route('/:dishId/comments') //Declaramos el endpoint
 
+.get((req,res,next) => {
+    Dishes.findById(req.params.dishId)
+        .then((dish) => {
+            if (dish != null) {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(dish.comments);                    
+            } else {
+                err = new Error('Dish '+ req.params.dishId+' not extist');
+                err.status = 404;
+                return next(err); //Retornar error para que no sea manejado en app.js
+            }
+        }, (err) => next(err))
+        .catch((err) => next(err));
+})
+
+.post((req,res,next) => {
+    Dishes.findById(req.params.dishId)
+        .then((dish) => {
+            if (dish != null) { 
+                dish.comments.push(req.body);
+                dish.save()
+                    .then((dish) => {
+                        res.statusCode = 200;
+                        res.setHeader('Content-Type', 'application/json');
+                        res.json(dish.comments);        
+                    })
+            } else {
+                err = new Error('Dish '+ req.params.dishId+' not extist');
+                err.status = 404;
+                return next(err);
+            }
+        }, (err) => next(err))
+        .catch((err) => next(err));
+})
+
+.put((req,res,next) => {
+    res.statusCode = 403;
+    res.end('PUT operation not supported on /dishes'
+    + req.params.dishId+ '/comments');
+})
+
+.delete((req,res,next) => {
+    Dishes.findById(req.params.dishId)
+        .then((dish) => {
+            if (dish != null) { 
+                for(var i = (dish.comments.length - 1); i >= 0; i--) {
+                    dish.comments.id(dish.comments[i]._id).remove();
+                }
+                dish.save()
+                    .then((dish) => {
+                        res.statusCode = 200;
+                        res.setHeader('Content-Type', 'application/json');
+                        res.json(dish);        
+                    })     
+            } else {
+                err = new Error('Dish '+ req.params.dishId+' not extist');
+                err.status = 404;
+                return next(err);
+            }
+        }, (err) => next(err))
+        .catch((err) => next(err));
+});
+
+//----------------------------------------------------------------
+dishRouter.route('/:dishId/comments/:commentId')
+
+.get((req,res,next) => {
+    Dishes.findById(req.params.dishId)
+        .then((dish) => {
+            if (dish != null && dish.comments.id(req.params.commentId) != null) {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(dish.comments.id(req.params.commentId));                    
+            } else if (dish == null){
+                err = new Error('Dish '+ req.params.dishId+' not extist');
+                err.status = 404;
+                return next(err); //Retornar error para que no sea manejado en app.js
+            } else {
+                err = new Error('Comment '+ req.params.commentId+' not extist');
+                err.status = 404;
+                return next(err); //Retornar error para que no sea manejado en app.js
+            }
+        }, (err) => next(err))
+        .catch((err) => next(err));
+})
+
+.post((req,res,next) => {
+    res.statusCode = 403;
+    res.end('POST operation not supported on /dishes/'+req.params.dishId 
+    + '/comments/'+req.params.commentId);
+})
+
+.put((req,res,next) => {
+    Dishes.findById(req.params.dishId)
+        .then((dish) => {
+            if (dish != null && dish.comments.id(req.params.commentId) != null) {
+                if (req.body.rating) {
+                    dish.comments.id(req.params.commentId).rating = req.body.rating;
+                }   
+                if (req.body.comment) {
+                    dish.comments.id(req.params.commentId).comment = req.body.comment;
+                }       
+                dish.save()
+                .then((dish) => {
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.json(dish);
+                }, (err) => next(err));
+            } else if (dish == null){
+                err = new Error('Dish '+ req.params.dishId+' not extist');
+                err.status = 404;
+                return next(err); //Retornar error para que no sea manejado en app.js
+            } else {
+                err = new Error('Comment '+ req.params.commentId+' not extist');
+                err.status = 404;
+                return next(err); //Retornar error para que no sea manejado en app.js
+            }
+        }, (err) => next(err))
+        .catch((err) => next(err));
+})
+
+.delete((req,res,next) => {
+    Dishes.findById(req.params.dishId)
+    .then((dish) => {
+        if (dish != null && dish.comments.id(req.params.commentId) != null) { 
+            dish.comments.id(req.params.commentId).remove();
+            dish.save()
+                .then((dish) => {
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.json(dish);        
+                })     
+        } else if (dish == null){
+            err = new Error('Dish '+ req.params.dishId+' not extist');
+            err.status = 404;
+            return next(err); //Retornar error para que no sea manejado en app.js
+        } else {
+            err = new Error('Comment '+ req.params.commentId+' not extist');
+            err.status = 404;
+            return next(err); //Retornar error para que no sea manejado en app.js
+        }
+    }, (err) => next(err))
+    .catch((err) => next(err));
+});
 module.exports = dishRouter;
